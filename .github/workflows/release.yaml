@@ -71,7 +71,7 @@ jobs:
       # if linux
       - name: Install linux dependencies
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt install libgtk-3-dev libayatana-appindicator3-dev
+        run: sudo apt-get update && sudo apt install libgtk-3-dev libayatana-appindicator3-dev
       # end if
 
       - name: Build with CMake
