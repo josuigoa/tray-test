@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags: 
+      - 'v*'
+
+jobs:
+  create_release:
+    name: Create release
+    runs-on: ubuntu-latest
+    # Note this. We are going to use that in further jobs.
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+  release_assets:
+    name: Release assets
+    needs: create_release # we need to know the upload URL
+
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+
+        include:
+        - os: ubuntu-latest
+          short_os: linux
+          filename: ideckia_tray_linux
+          cc: "gcc"
+          cxx: "g++"
+
+        - os: windows-latest
+          short_os: win
+          filename: ideckia_tray.exe
+          cc: "cl"
+          cxx: "cl"
+
+        - os: macos-latest
+          short_os: macos
+          filename: ideckia_tray_macos
+          cc: "clang"
+          cxx: "clang++"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.13
+        with:
+          cmake-version: '3.16.x'
+
+      - name: Setup Ninja
+        uses: ashutoshvarma/setup-ninja@master
+        with:
+          # ninja version to download. Default: 1.10.0
+          version: 1.10.0
+      
+      # if linux
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt install libgtk-3-dev libayatana-appindicator3-dev
+      # end if
+
+      - name: Build with CMake
+        uses: ashutoshvarma/action-cmake-build@master
+        with:
+          build-dir: ${{ runner.workspace }}/build
+          cc: ${{ matrix.config.cc }}
+          cxx: ${{ matrix.config.cxx }}
+          configure-options: -G Ninja
+          build-type: Release
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_name: ${{ matrix.filename }}
+          asset_path: bin/${{ matrix.filename }}
+          asset_content_type: application/octet-stream
