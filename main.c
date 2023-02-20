@@ -13,9 +13,23 @@
 
 static struct tray tray;
 
+static void client_cb(struct tray_menu *item) {
+  (void)item;
+  printf("client\n");
+  fflush(NULL);
+  tray_update(&tray);
+}
+
 static void editor_cb(struct tray_menu *item) {
   (void)item;
   printf("editor\n");
+  fflush(NULL);
+  tray_update(&tray);
+}
+
+static void logs_cb(struct tray_menu *item) {
+  (void)item;
+  printf("logs\n");
   fflush(NULL);
   tray_update(&tray);
 }
@@ -32,7 +46,9 @@ static struct tray tray = {
     .menu =
         (struct tray_menu[]){
             {.text = "ideckia port: xxxx", .disabled = 1},
+            {.text = "client", .cb = client_cb},
             {.text = "editor", .cb = editor_cb},
+            {.text = "logs", .cb = logs_cb},
             {.text = "-"},
             {.text = "quit", .cb = quit_cb},
             {.text = NULL}},
@@ -45,7 +61,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // disable the client item if no extra argument is provided
+  tray.menu[1].disabled = argc < 4;
+
+  // set the provided argument as icon path
   tray.icon = argv[1];
+
+  // set the provided argument as port number in the first item
   char menu_port[30] = "ideckia port: ";
   strcat(menu_port, argv[2]);
   tray.menu[0].text = menu_port;
