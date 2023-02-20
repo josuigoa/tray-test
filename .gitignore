@@ -37,6 +37,5 @@
 example
 example.exe
 
-zig-out/*
-zig-cache/*
+bin/*
 build/*
