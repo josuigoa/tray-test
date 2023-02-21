@@ -46,9 +46,13 @@ static struct tray tray = {
     .menu =
         (struct tray_menu[]){
             {.text = "ideckia port: xxxx", .disabled = 1},
-            {.text = "client", .cb = client_cb},
-            {.text = "editor", .cb = editor_cb},
-            {.text = "logs", .cb = logs_cb},
+            {.text = "open",
+             .submenu =
+                 (struct tray_menu[]) {
+                     {.text = "client", .cb = client_cb},
+                     {.text = "editor", .cb = editor_cb},
+                     {.text = "logs", .cb = logs_cb},
+                     {.text = NULL}}},
             {.text = "-"},
             {.text = "quit", .cb = quit_cb},
             {.text = NULL}},
@@ -62,7 +66,7 @@ int main(int argc, char *argv[]) {
   }
 
   // disable the client item if no extra argument is provided
-  tray.menu[1].disabled = argc < 4;
+  tray.menu[1].submenu[0].disabled = argc < 4;
 
   // set the provided argument as icon path
   tray.icon = argv[1];
