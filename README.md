@@ -3,6 +3,8 @@ Tray
 
 Forked from [dmikushin/tray](https://github.com/dmikushin/tray)
 
+JSON parser taken from [DaveGamble/cJSON](https://github.com/DaveGamble/cJSON)
+
 Cross-platform, single header, super tiny C99 implementation of a system tray icon with a popup menu.
 
 Works well on:

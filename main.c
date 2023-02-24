@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include "cJSON.h"
 
 #if defined (_WIN32) || defined (_WIN64)
 #define TRAY_WINAPI 1
@@ -11,72 +13,89 @@
 
 #include "tray.h"
 
-static struct tray tray;
-
-static void client_cb(struct tray_menu *item) {
+static void tray_cb(struct tray_menu *item) {
   (void)item;
-  printf("client\n");
+  printf("%s\n", item->text);
   fflush(NULL);
-  tray_update(&tray);
+  if (item->exit) {
+    tray_exit();
+  }
 }
-
-static void editor_cb(struct tray_menu *item) {
-  (void)item;
-  printf("editor\n");
-  fflush(NULL);
-  tray_update(&tray);
-}
-
-static void logs_cb(struct tray_menu *item) {
-  (void)item;
-  printf("logs\n");
-  fflush(NULL);
-  tray_update(&tray);
-}
-
-static void quit_cb(struct tray_menu *item) {
-  (void)item;
-  printf("quit\n");
-  fflush(NULL);
-  tray_exit();
-}
-
-static struct tray tray = {
-    .icon = NULL,
-    .menu =
-        (struct tray_menu[]){
-            {.text = "ideckia port: xxxx", .disabled = 1},
-            {.text = "open",
-             .submenu =
-                 (struct tray_menu[]) {
-                     {.text = "client", .cb = client_cb},
-                     {.text = "editor", .cb = editor_cb},
-                     {.text = "logs", .cb = logs_cb},
-                     {.text = NULL}}},
-            {.text = "-"},
-            {.text = "quit", .cb = quit_cb},
-            {.text = NULL}},
-};
 
 int main(int argc, char *argv[]) {
 
-  if (argc < 3) {
-    printf("\nExpected the icon path and the port as argument");
+  if (argc < 2) {
+    printf("\nExpected the menu definition as argument");
     return 1;
   }
 
-  // disable the client item if no extra argument is provided
-  tray.menu[1].submenu[0].disabled = argc < 4;
+  cJSON *menu_json = cJSON_Parse(argv[1]);
+  if (menu_json == NULL) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if (error_ptr != NULL) {
+        fprintf(stderr, "Error before: %s\n", error_ptr);
+    }
+    return 1;
+  }
 
-  // set the provided argument as icon path
-  tray.icon = argv[1];
+  cJSON* item;
+  cJSON* text;
+  cJSON* menu;
+  cJSON* icon;
+  cJSON* sub_menu;
+  cJSON* sub_item;
+  cJSON* sub_text;
 
-  // set the provided argument as port number in the first item
-  char menu_port[30] = "ideckia port: ";
-  strcat(menu_port, argv[2]);
-  tray.menu[0].text = menu_port;
+  char* icon_path;
 
-  if (tray_init(&tray) < 0) {
+  icon = cJSON_GetObjectItemCaseSensitive(menu_json, "icon");
+  if (cJSON_IsString(icon) && (icon->valuestring != NULL)) {
+    icon_path = icon->valuestring;
+  }
+  free(icon);
+
+  struct tray ideckia_tray = {.icon = icon_path};
+
+  menu = cJSON_GetObjectItemCaseSensitive(menu_json, "menu");
+  int menu_length = cJSON_GetArraySize(menu);
+  ideckia_tray.menu = (struct tray_menu*) malloc(sizeof(struct tray_menu) * (menu_length + 1));
+  for (int i = 0; i < menu_length; i++) {
+    item = cJSON_GetArrayItem(menu, i);
+    ideckia_tray.menu[i] = (struct tray_menu) {.text = cJSON_GetObjectItemCaseSensitive(item, "text")->valuestring, .cb = tray_cb};
+    if (cJSON_HasObjectItem(item, "disabled")) {
+        ideckia_tray.menu[i].disabled = cJSON_GetObjectItemCaseSensitive(item, "disabled")->valueint;
+    }
+    if (cJSON_HasObjectItem(item, "exit")) {
+        ideckia_tray.menu[i].exit = cJSON_GetObjectItemCaseSensitive(item, "exit")->valueint;
+    }
+
+    if (cJSON_HasObjectItem(item, "sub")) {
+      sub_menu = cJSON_GetObjectItemCaseSensitive(item, "sub");
+      int sub_menu_length = cJSON_GetArraySize(sub_menu);
+      ideckia_tray.menu[i].submenu = (struct tray_menu *) malloc(sizeof(struct tray_menu) * (sub_menu_length + 1));
+
+      for (int j = 0; j < sub_menu_length; j++) {
+        sub_item = cJSON_GetArrayItem(sub_menu, j);
+        ideckia_tray.menu[i].submenu[j] = (struct tray_menu) {.text = cJSON_GetObjectItemCaseSensitive(sub_item, "text")->valuestring, .cb = tray_cb};
+        if (cJSON_HasObjectItem(item, "disabled")) {
+            ideckia_tray.menu[i].submenu[j].disabled = cJSON_GetObjectItemCaseSensitive(sub_item, "disabled")->valueint;
+        }
+        if (cJSON_HasObjectItem(item, "exit")) {
+            ideckia_tray.menu[i].submenu[j].exit = cJSON_GetObjectItemCaseSensitive(sub_item, "exit")->valueint;
+        }
+      }
+      ideckia_tray.menu[i].submenu[sub_menu_length] = (struct tray_menu) {.text = NULL};
+    }
+    
+  }
+
+  ideckia_tray.menu[menu_length] = (struct tray_menu) {.text = NULL};
+  free(menu);
+  free(item);
+  free(sub_menu);
+  free(sub_item);
+
+  if (tray_init(&ideckia_tray) < 0) {
     printf("failed to create tray\n");
     return 1;
   }
