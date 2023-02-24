@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
   }
   free(icon);
 
-  struct tray ideckia_tray = {.icon = icon_path};
+  struct tray ideckia_tray = { .icon = icon_path };
 
   menu = cJSON_GetObjectItemCaseSensitive(menu_json, "menu");
   int menu_length = cJSON_GetArraySize(menu);
