@@ -1,1 +1,1 @@
-"{\"icon\":\"icon_path\", \"menu\":[{\"text\": \"ideckia port: 8888\", \"disabled\": 1},{\"text\": \"open\",\"sub\": [{\"text\": \"client\"},{\"text\": \"editor\"},{\"text\": \"logs\"}]},{\"text\": \"-\"},{\"text\": \"quit\"}]}"
+"{\"icon\":\"icon_path\", \"menu\":[{\"text\": \"ideckia port: 8888\", \"disabled\": 1},{\"text\": \"open\",\"menu\": [{\"text\": \"client\", \"menu\": [{\"text\": \"desktop\"}, {\"text\": \"mobile\"}]},{\"text\": \"editor\"},{\"text\": \"logs\"}]},{\"text\": \"-\"},{\"text\": \"quit\", \"exit\":1}]}"
